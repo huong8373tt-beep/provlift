@@ -170,7 +170,8 @@ func TestModuleMatchesUsesSlashSeparatedGlobs(t *testing.T) {
 		{"single star does not cross slash", "envs/prod/network", []string{"envs/*"}, false},
 		{"double star crosses slash", "envs/prod/network", []string{"envs/**"}, true},
 		{"normalizes dot and trailing slash", "envs/prod", []string{"./envs/prod/"}, true},
-		{"bare directory matches descendants", "envs/prod/network", []string{"envs/prod"}, true},
+		{"bare directory excludes descendants", "envs/prod/network", []string{"envs/prod"}, false},
+		{"directory double star matches descendants", "envs/prod/network", []string{"envs/prod/**"}, true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if got := moduleMatches(test.rel, test.filters); got != test.want {

@@ -168,6 +168,9 @@ func runUpgrade(cmd *cobra.Command, g *globalOptions, opts *upgradeOptions) (out
 			return exitWith(ExitError, fmt.Errorf("--next-major cannot be combined with --to"))
 		}
 	}
+	if opts.modules, err = prepareModuleFilters(ws.inv, opts.modules, g.stderr()); err != nil {
+		return exitWith(ExitError, err)
+	}
 
 	platforms := opts.platforms
 	if len(platforms) == 0 {

@@ -267,17 +267,50 @@ func selectorsMatch(addr model.Address, selectors []string) bool {
 	return false
 }
 
+// prepareModuleFilters normalizes and validates --module values before a
+// command starts work. Each unmatched filter is reported independently so a
+// typo cannot look like a successful no-op.
+func prepareModuleFilters(inv *model.Inventory, filters []string, warnings io.Writer) ([]string, error) {
+	normalized := make([]string, len(filters))
+	for i, filter := range filters {
+		normalized[i] = normalizeModuleFilter(filter)
+		if !doublestar.ValidatePattern(normalized[i]) {
+			return nil, fmt.Errorf("invalid --module pattern %q", filter)
+		}
+	}
+
+	for i, filter := range normalized {
+		matched := false
+		for _, mod := range inv.Modules {
+			if moduleMatches(mod.RelDir, []string{filter}) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			fmt.Fprintf(warnings, "warning: --module %q matched no modules\n", filters[i])
+		}
+	}
+	return normalized, nil
+}
+
+func normalizeModuleFilter(filter string) string {
+	filter = strings.TrimSuffix(strings.TrimPrefix(filepath.ToSlash(filter), "./"), "/")
+	if filter == "" {
+		return "."
+	}
+	return filter
+}
+
 // moduleMatches filters modules by slash-separated doublestar globs. A bare
-// directory matches that directory and all of its descendants.
+// path matches only that module; append /** to include its descendants.
 func moduleMatches(rel string, filters []string) bool {
 	if len(filters) == 0 {
 		return true
 	}
+	rel = filepath.ToSlash(rel)
 	for _, filter := range filters {
-		filter = strings.TrimSuffix(strings.TrimPrefix(filepath.ToSlash(filter), "./"), "/")
-		if rel == filter || strings.HasPrefix(rel, filter+"/") {
-			return true
-		}
+		filter = normalizeModuleFilter(filter)
 		if ok, err := doublestar.Match(filter, rel); err == nil && ok {
 			return true
 		}

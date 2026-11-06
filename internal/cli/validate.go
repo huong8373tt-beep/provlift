@@ -365,7 +365,7 @@ during an upgrade. Use --plan to opt in.`,
 			if err != nil {
 				return exitWith(ExitError, err)
 			}
-			runner, err := newRunner(ws, g)
+			modules, err = prepareModuleFilters(ws.inv, modules, g.stderr())
 			if err != nil {
 				return exitWith(ExitError, err)
 			}
@@ -387,6 +387,10 @@ during an upgrade. Use --plan to opt in.`,
 				}
 				fmt.Fprintln(g.stdout(), "No root modules to validate.")
 				return nil
+			}
+			runner, err := newRunner(ws, g)
+			if err != nil {
+				return exitWith(ExitError, err)
 			}
 
 			for _, mod := range targets {
